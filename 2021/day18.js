@@ -4,11 +4,6 @@ let input = fs.readFileSync("./input18.txt").toString().split("\n");
 
 input.pop();
 
-function Node(leftVal, rightVal) {
-    this.leftVal = leftVal;
-    this.rightVal = rightVal;
-}
-
 function getExploder(line) {
     let stack = [];
     for (let i = 0; i < line.length; i++) {
