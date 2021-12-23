@@ -1,19 +1,6 @@
 
-const input = [
-    "#############",
-    "#...........#",
-    "###A#D#A#B###",
-    "  #C#C#D#B#  ",
-    "  #########  "
-];
-
-// A = 1
-// B = 10
-// C = 100
-// D = 1000
-
 function isAtEnd(input) {
-    for (let i = 0; i < input.room1.length; i++) {
+    for (let i = input.room1.length - 1; i >= 0; i--) {
         if (input.room1[i] !== "A" ||
             input.room2[i] !== "B" ||
             input.room3[i] !== "C" ||
@@ -26,8 +13,8 @@ function isAtEnd(input) {
 
 function whoCanMove(hallwayIndex, letter, input) {
     let ans = [];
-    for (let i = hallwayIndex; i >= 0; i--) {
-        if (input.hallway[i] === undefined) {
+    for (let i = hallwayIndex - 1; i >= 0; i--) {
+        if (input.hallway[i] === ' ') {
             continue;
         }
         if (input.hallway[i] === letter) {
@@ -35,8 +22,8 @@ function whoCanMove(hallwayIndex, letter, input) {
         }
         break;
     }
-    for (let i = hallwayIndex; i < input.hallway.length; i++) {
-        if (input.hallway[i] === undefined) {
+    for (let i = hallwayIndex + 1; i < 11; i++) {
+        if (input.hallway[i] === ' ') {
             continue;
         }
         if (input.hallway[i] === letter) {
@@ -47,47 +34,23 @@ function whoCanMove(hallwayIndex, letter, input) {
     return ans;
 }
 
-function copyState(input) {
-    return {
-        energy: input.energy,
-        hallway: input.hallway.slice(),
-        room1: input.room1.slice(),
-        room2: input.room2.slice(),
-        room3: input.room3.slice(),
-        room4: input.room4.slice()
-    };
+function replaceAt(str, index, replacement) {
+    return str.substr(0, index) + replacement + str.substr(index + replacement.length);
 }
 
-function equal(state1, state2) {
-    for (let i = 0; i < state1.hallway.length; i++) {
-        if (state1.hallway[i] !== state2.hallway[i]) {
-            return false;
-        }
-    }
-    if (state1.room1.length !== state2.room1.length ||
-        state1.room2.length !== state2.room2.length ||
-        state1.room3.length !== state2.room3.length ||
-        state1.room4.length !== state2.room4.length) {
-        throw new "FFFFFF";
-    }
-    for (let i = 0; i < state1.room1.length; i++) {
-        if (state1.room1[i] !== state2.room1[i] ||
-            state1.room2[i] !== state2.room2[i] ||
-            state1.room3[i] !== state2.room3[i] ||
-            state1.room4[i] !== state2.room4[i]) {
-            return false;
-        }
-    }
-    return true;
+function getKey(input) {
+    return `${input.hallway}${input.room1}${input.room2}${input.room3}${input.room4}`;
 }
+
+const roomLetter = " ABCD";
 
 function getLetterFor(roomIndex) {
-    return [undefined, "A", "B", "C", "D"][roomIndex];
+    return roomLetter[roomIndex];
 }
 
 function canMoveIntoRoom(room, letter) {
-    for (let i = 0; i < room.length; i++) {
-        if (room[i] !== undefined && room[i] !== letter) {
+    for (let i = room.length - 1; i >= 0; i--) {
+        if (room[i] !== ' ' && room[i] !== letter) {
             return false;
         }
     }
@@ -96,31 +59,36 @@ function canMoveIntoRoom(room, letter) {
 
 function getTopLetter(room) {
     for (let i = 0; i < room.length; i++) {
-        if (room[i] !== undefined) {
+        if (room[i] !== ' ') {
             return room[i];
         }
     }
-    return undefined;
 }
 
 function getNextMovesForRoom(roomIndex, input) {
-    const room = input["room" + roomIndex];
-    const letter = [undefined, "A", "B", "C", "D"][roomIndex];
-    const energy = getEnergyFor(letter);
-    const nextMoves = [];
-    const topIndex = getTopIndex(room);
+    const vroom = "room" + roomIndex;
+    const room = input[vroom];
+    const letter = getLetterFor(roomIndex);
     if (canMoveIntoRoom(room, letter)) {
-        // can come from hallway
-        whoCanMove(roomIndex * 2, letter, input).forEach((hallwayIndex) => {
-            const newState = copyState(input);
-            newState.hallway[hallwayIndex] = undefined;
-            const newEnergy = (energy * Math.abs(hallwayIndex - (roomIndex * 2))) + (topIndex * energy);
-            newState["room" + roomIndex][topIndex - 1] = letter;
-            newState.energy += newEnergy;
-            nextMoves.push(newState);
+        const energy = getEnergyFor(letter);
+        const topIndex = getTopIndex(room);
+        const roomer = roomIndex * 2;
+        const topper = topIndex * energy;
+        const lastTop = topIndex - 1;
+        return whoCanMove(roomer, letter, input).map((hallwayIndex) => {
+            const result = {
+                hallway: replaceAt(input.hallway, hallwayIndex, ' '),
+                room1: input.room1,
+                room2: input.room2,
+                room3: input.room3,
+                room4: input.room4,
+                energy: input.energy + (energy * Math.abs(hallwayIndex - roomer)) + topper
+            }
+            result[vroom] = replaceAt(input[vroom], lastTop, letter);
+            return result;
         });
     }
-    return nextMoves;
+    return [];
 }
 
 function getOpenHallway(roomIndex, input) {
@@ -129,17 +97,17 @@ function getOpenHallway(roomIndex, input) {
         if (i === 2 || i === 4 || i === 6 || i === 8) {
             continue;
         }
-        if (input.hallway[i] === undefined) {
+        if (input.hallway[i] === ' ') {
             open.push(i);
         } else {
             break;
         }
     }
-    for (let i = roomIndex + 1; i < input.hallway.length; i++) {
+    for (let i = roomIndex + 1; i < 11; i++) {
         if (i === 2 || i === 4 || i === 6 || i === 8) {
             continue;
         }
-        if (input.hallway[i] === undefined) {
+        if (input.hallway[i] === ' ') {
             open.push(i);
         } else {
             break;
@@ -148,25 +116,20 @@ function getOpenHallway(roomIndex, input) {
     return open;
 }
 
+const value = {
+    A: 1,
+    B: 10,
+    C: 100,
+    D: 1000
+};
+
 function getEnergyFor(letter) {
-    if (letter === "A") {
-        return 1;
-    }
-    if (letter === "B") {
-        return 10;
-    }
-    if (letter === "C") {
-        return 100;
-    }
-    if (letter === "D") {
-        return 1000;
-    }
-    return 0;
+    return value[letter];
 }
 
 function canMoveFromRoom(room, letter) {
     for (let i = 0; i < room.length; i++) {
-        if (room[i] !== undefined && room[i] !== letter) {
+        if (room[i] !== ' ' && room[i] !== letter) {
             return true;
         }
     }
@@ -175,7 +138,7 @@ function canMoveFromRoom(room, letter) {
 
 function getTopIndex(room) {
     for (let i = 0; i < room.length; i++) {
-        if (room[i] !== undefined) {
+        if (room[i] !== ' ') {
             return i;
         }
     }
@@ -184,21 +147,24 @@ function getTopIndex(room) {
 
 function getNextMovesFromRoom(roomIndex, input) {
     const room = input["room" + roomIndex];
-    const letter = [undefined, "A", "B", "C", "D"][roomIndex];
-    const nextMoves = [];
-    const topIndex = getTopIndex(room);
-    const letterEnergy = getEnergyFor(room[topIndex]);
+    const letter = getLetterFor(roomIndex);
     if (canMoveFromRoom(room, letter)) {
-        getOpenHallway(roomIndex * 2, input).forEach((hallwayIndex) => {
-            const newState = copyState(input);
-            const newEnergy = letterEnergy + (Math.abs(hallwayIndex - (roomIndex * 2)) * letterEnergy) + (letterEnergy * topIndex);
-            newState.hallway[hallwayIndex] = room[topIndex];
-            newState["room" + roomIndex][topIndex] = undefined;
-            newState.energy += newEnergy;
-            nextMoves.push(newState);
+        const topIndex = getTopIndex(room);
+        const letterEnergy = getEnergyFor(room[topIndex]);
+        return getOpenHallway(roomIndex * 2, input).map((hallwayIndex) => {
+            const result = {
+                hallway: replaceAt(input.hallway, hallwayIndex, room[topIndex]),
+                room1: input.room1,
+                room2: input.room2,
+                room3: input.room3,
+                room4: input.room4,
+                energy: input.energy + letterEnergy + (Math.abs(hallwayIndex - (roomIndex * 2)) * letterEnergy) + (letterEnergy * topIndex)
+            };
+            result["room" + roomIndex] = replaceAt(input["room" + roomIndex], topIndex, ' ');
+            return result;
         });
     }
-    return nextMoves;
+    return [];
 }
 
 function nextMovescanMove(input) {
@@ -214,47 +180,43 @@ function nextMovescanMove(input) {
     );
 }
 
-
 function calculateFor(state) {
     let states = [state];
     while (states.length > 0) {
-        let next = [];
-        for (let i = 0; i < states.length; i++) {
-            if (isAtEnd(states[i])) {
-                return states[i].energy;
-            } else {
-                nextMovescanMove(states[i]).forEach((input) => {
-                    const match = next.findIndex((n) => equal(n, input));
-                    if (match !== -1) {
-                        if (input.energy < next[match].energy) {
-                            next[match] = input;
-                        }
-                    } else {
-                        next.push(input);
-                    }
-                });
+        let seen = {};
+        for (let i = states.length - 1; i >= 0; i--) {
+            const st = states[i];
+            if (isAtEnd(st) === true) {
+                return st.energy;
             }
+            nextMovescanMove(st).forEach((input) => {
+                const key = getKey(input);
+                if (seen[key] === undefined ||
+                    input.energy < seen[key].energy) {
+                    seen[key] = input;
+                }
+            });
         }
-        states = next;
+        states = Object.values(seen);
     }
-    return ends;
+    return -1;
 }
 
 console.log("part 1", calculateFor({
     energy: 0,
-    hallway: new Array(11).fill(undefined),
-    room1: ["A", "C"],
-    room2: ["D", "C"],
-    room3: ["A", "D"],
-    room4: ["B", "B"]
+    hallway: "           ",
+    room1: "AC",
+    room2: "DC",
+    room3: "AD",
+    room4: "BB"
 }));
 
 console.log("part 2", calculateFor({
     energy: 0,
-    hallway: new Array(11).fill(undefined),
-    room1: ["A", "D", "D", "C"],
-    room2: ["D", "C", "B", "C"],
-    room3: ["A", "B", "A", "D"],
-    room4: ["B", "A", "C", "B"]
+    hallway: "           ",
+    room1: "ADDC",
+    room2: "DCBC",
+    room3: "ABAD",
+    room4: "BACB"
 }));
 
